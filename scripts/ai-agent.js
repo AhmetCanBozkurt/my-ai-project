@@ -216,7 +216,13 @@ ${context.files.map(f => `\n### ${f.path}\n\`\`\`\n${f.content}\n\`\`\``).join('
           success = true;
           break;
         } catch (e) {
-          console.log(`❌ ${modelName} çalışmadı: ${e.message.substring(0, 100)}`);
+          // Detaylı hata mesajı - URL'yi görmek için
+          const errorMsg = e.message || String(e);
+          console.log(`❌ ${modelName} çalışmadı:`);
+          console.log(`   Hata: ${errorMsg.substring(0, 200)}`);
+          if (e.stack) {
+            console.log(`   Stack: ${e.stack.substring(0, 300)}`);
+          }
           continue;
         }
       }
@@ -251,6 +257,16 @@ ${context.files.map(f => `\n### ${f.path}\n\`\`\`\n${f.content}\n\`\`\``).join('
 
   } catch (error) {
     console.error('❌ AI API hatası:', error.message);
+    // Detaylı hata bilgisi - URL'yi görmek için
+    if (error.message && error.message.includes('fetching from')) {
+      const urlMatch = error.message.match(/https?:\/\/[^\s]+/);
+      if (urlMatch) {
+        console.error('🔍 Kullanılan URL:', urlMatch[0]);
+      }
+    }
+    if (error.stack) {
+      console.error('Stack trace:', error.stack.substring(0, 500));
+    }
     return null;
   }
 }
