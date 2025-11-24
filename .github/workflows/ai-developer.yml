@@ -1,0 +1,55 @@
+name: AI Developer Agent
+
+on:
+  workflow_dispatch:  # Manuel tetikleme
+  schedule:
+    # Her gün saat 00:00 UTC'de çalışır (isteğe bağlı)
+    - cron: '0 0 * * *'
+  push:
+    branches:
+      - main
+    paths:
+      - 'tasks/active-task.md'  # Task dosyası değiştiğinde tetiklenir
+
+jobs:
+  ai-developer:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Run AI Agent
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: node scripts/ai-agent.js
+
+      - name: Create Pull Request
+        if: success()
+        uses: peter-evans/create-pull-request@v5
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: '🤖 AI Agent: Otomatik kod değişiklikleri'
+          title: '🤖 AI Agent: Otomatik Güncellemeler'
+          body: |
+            Bu PR, AI Agent tarafından otomatik olarak oluşturulmuştur.
+            
+            **Görev:** `tasks/active-task.md` dosyasındaki talimatlara göre yapılan değişiklikler.
+            
+            Lütfen değişiklikleri gözden geçirin ve onaylayın.
+          branch: ai-agent/auto-updates
+          delete-branch: true
+
