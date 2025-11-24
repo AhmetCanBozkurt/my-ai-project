@@ -3,6 +3,7 @@
 /**
  * Cloud AI Developer Agent
  * Google Gemini API kullanarak kod yazan otomatik ajan
+ * DÜZELTİLMİŞ VERSİYON (Model isimleri güncellendi)
  */
 
 const fs = require('fs').promises;
@@ -23,27 +24,9 @@ if (!GEMINI_API_KEY) {
 // Gemini AI başlatma
 const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
 
-// Mevcut modelleri listele (debug için) - SDK'da listModels() olmayabilir, bu yüzden try-catch ile
-async function listAvailableModels() {
-  try {
-    // listModels() metodu SDK'da olmayabilir, bu yüzden hata yakalama ile
-    if (typeof genAI.listModels === 'function') {
-      const models = await genAI.listModels();
-      console.log('📋 Mevcut modeller:');
-      models.forEach(m => {
-        console.log(`  - ${m.name} (${m.displayName || 'N/A'})`);
-      });
-    } else {
-      console.log('ℹ️  Model listeleme metodu mevcut değil, direkt deneme yapılacak');
-    }
-  } catch (e) {
-    console.log('ℹ️  Modeller listelenemedi (normal olabilir):', e.message.substring(0, 100));
-  }
-}
-
-// Model adını dene - farklı model adlarını sırayla dene
-// Google AI Studio'da genellikle 'models/gemini-pro' veya 'models/gemini-1.5-pro' kullanılır
-let model = genAI.getGenerativeModel({ model: 'gemini-1.5-pro' });
+// 🛠️ DÜZELTME: Başlangıç modeli olarak en stabil ve hızlı olan seçildi
+let currentModelName = 'gemini-1.5-flash';
+let model = genAI.getGenerativeModel({ model: currentModelName });
 
 /**
  * Task dosyasını oku
@@ -78,9 +61,7 @@ async function getProjectContext() {
         path: 'package.json',
         content: packageJson
       });
-    } catch (e) {
-      // package.json yoksa devam et
-    }
+    } catch (e) {}
 
     // README varsa oku
     try {
@@ -92,9 +73,7 @@ async function getProjectContext() {
         path: 'README.md',
         content: readme
       });
-    } catch (e) {
-      // README yoksa devam et
-    }
+    } catch (e) {}
 
     // Proje yapısını tara (max 20 dosya)
     const files = await getAllFiles(PROJECT_ROOT, 20);
@@ -108,9 +87,7 @@ async function getProjectContext() {
             path: relativePath,
             content: content.substring(0, 5000) // Max 5000 karakter
           });
-        } catch (e) {
-          // Dosya okunamazsa atla
-        }
+        } catch (e) {}
       }
     }
   } catch (error) {
@@ -139,7 +116,6 @@ async function getAllFiles(dirPath, maxFiles = 50) {
         const fullPath = path.join(currentPath, entry.name);
         const relativePath = path.relative(dirPath, fullPath);
         
-        // Ignore dizinleri atla
         if (ignoreDirs.some(ignore => relativePath.includes(ignore))) {
           continue;
         }
@@ -150,9 +126,7 @@ async function getAllFiles(dirPath, maxFiles = 50) {
           files.push(fullPath);
         }
       }
-    } catch (error) {
-      // Hata durumunda devam et
-    }
+    } catch (error) {}
   }
 
   await scanDir(dirPath);
@@ -181,9 +155,8 @@ ${context.files.map(f => `\n### ${f.path}\n\`\`\`\n${f.content}\n\`\`\``).join('
 3. Her dosya için tam içeriği JSON formatında döndür
 4. Sadece değişen veya yeni dosyaları döndür
 5. Kod kalitesi ve best practice'lere uy
-6. HTML/React kodlarında label elementlerini doğru kullan (for attribute'u geçerli bir id'ye referans vermeli)
-7. Tüm kodlar çalışır durumda ve syntax hatası içermemeli
-8. Eğer Express.js kullanıyorsan, server.js dosyası oluştur ve package.json'a start script'i ekle
+6. Express.js kullanıyorsan server.js oluştur ve package.json scripts kısmını güncelle
+7. Kesinlikle geçerli bir JSON döndür.
 
 ## Çıktı Formatı (JSON):
 \`\`\`json
@@ -202,98 +175,65 @@ ${context.files.map(f => `\n### ${f.path}\n\`\`\`\n${f.content}\n\`\`\``).join('
 
   try {
     console.log('🤖 AI ile iletişim kuruluyor...');
-    console.log('📤 Prompt uzunluğu:', prompt.length, 'karakter');
-    console.log('🤖 Kullanılan model: gemini-1.5-pro');
+    console.log(`🤖 Kullanılan model: ${currentModelName}`);
     
     let result;
     try {
       result = await model.generateContent(prompt);
     } catch (modelError) {
-      // Eğer gemini-1.5-pro çalışmazsa, farklı model adlarını dene
-      if (modelError.message && modelError.message.includes('not found')) {
-        console.log('⚠️  gemini-1.5-pro bulunamadı, alternatif modeller deneniyor...');
-        
-        const modelNames = ['gemini-pro', 'gemini-1.5-flash', 'gemini-1.5-flash-latest'];
-        let success = false;
-        
-        for (const modelName of modelNames) {
-          try {
-            console.log(`🔄 ${modelName} deneniyor...`);
-            const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
-            model = genAI.getGenerativeModel({ model: modelName });
-            result = await model.generateContent(prompt);
-            console.log(`✅ ${modelName} ile başarılı!`);
-            success = true;
-            break;
-          } catch (e) {
-            console.log(`❌ ${modelName} çalışmadı: ${e.message.substring(0, 100)}`);
-            continue;
-          }
+      console.log(`⚠️  ${currentModelName} ile hata alındı, alternatif modeller deneniyor...`);
+      
+      // 🛠️ DÜZELTME: Güncel ve çalışan model listesi
+      const modelNames = ['gemini-1.5-flash', 'gemini-2.0-flash-exp', 'gemini-1.5-pro-latest'];
+      let success = false;
+      
+      for (const modelName of modelNames) {
+        try {
+          console.log(`🔄 ${modelName} deneniyor...`);
+          // Model instance'ını yenile
+          const newGenAI = new GoogleGenerativeAI(GEMINI_API_KEY);
+          model = newGenAI.getGenerativeModel({ model: modelName });
+          result = await model.generateContent(prompt);
+          console.log(`✅ ${modelName} ile başarılı!`);
+          currentModelName = modelName;
+          success = true;
+          break;
+        } catch (e) {
+          console.log(`❌ ${modelName} çalışmadı: ${e.message.substring(0, 100)}`);
+          continue;
         }
-        
-        if (!success) {
-          throw new Error('Hiçbir model çalışmadı. Lütfen API key\'inizi ve model adlarını kontrol edin.');
-        }
-      } else {
-        throw modelError;
+      }
+      
+      if (!success) {
+        throw new Error('Hiçbir model çalışmadı. API Key veya kota durumunu kontrol edin.');
       }
     }
+
     const response = await result.response;
     const text = response.text();
     
-    if (!text || text.trim().length === 0) {
-      console.error('❌ AI boş yanıt döndürdü');
-      return null;
-    }
-
-    console.log('📥 AI yanıtı alındı, parse ediliyor...');
-    console.log('📏 Yanıt uzunluğu:', text.length, 'karakter');
+    console.log('📥 AI yanıtı parse ediliyor...');
     
-    // JSON çıktısını parse et - farklı formatları dene
-    let jsonMatch = text.match(/```json\n([\s\S]*?)\n```/);
-    if (!jsonMatch) {
-      // Alternatif format: ```json ... ```
-      jsonMatch = text.match(/```json([\s\S]*?)```/);
-    }
-    if (!jsonMatch) {
-      // Alternatif format: { ... } direkt
-      jsonMatch = text.match(/\{[\s\S]*\}/);
-    }
+    // JSON Temizleme ve Parse Etme
+    let jsonStr = text;
+    const jsonMatch = text.match(/```json\n([\s\S]*?)\n```/) || 
+                      text.match(/```json([\s\S]*?)```/) || 
+                      text.match(/\{[\s\S]*\}/);
     
     if (jsonMatch) {
-      try {
-        const jsonText = jsonMatch[1] || jsonMatch[0];
-        const parsed = JSON.parse(jsonText);
-        console.log('✅ JSON başarıyla parse edildi');
-        return parsed;
-      } catch (e) {
-        console.error('⚠️  JSON match bulundu ama parse edilemedi:', e.message);
-      }
+        jsonStr = jsonMatch[1] || jsonMatch[0];
     }
 
-    // JSON bulunamazsa, tüm metni parse etmeyi dene
     try {
-      const parsed = JSON.parse(text);
-      console.log('✅ Tüm metin JSON olarak parse edildi');
-      return parsed;
+        const parsed = JSON.parse(jsonStr);
+        return parsed;
     } catch (e) {
-      console.error('❌ AI yanıtı parse edilemedi');
-      console.error('Parse hatası:', e.message);
-      console.log('\n📄 AI Yanıtı (ilk 3000 karakter):');
-      console.log(text.substring(0, 3000));
-      if (text.length > 3000) {
-        console.log(`... (${text.length - 3000} karakter daha var)`);
-      }
-      return null;
+        console.error('❌ JSON Parse Hatası. Ham veri:', text.substring(0, 200));
+        return null;
     }
+
   } catch (error) {
     console.error('❌ AI API hatası:', error.message);
-    if (error.stack) {
-      console.error('Stack trace:', error.stack);
-    }
-    if (error.response) {
-      console.error('API Response:', error.response);
-    }
     return null;
   }
 }
@@ -314,10 +254,7 @@ async function applyChanges(changes) {
     const dirPath = path.dirname(filePath);
 
     try {
-      // Dizin yoksa oluştur
       await fs.mkdir(dirPath, { recursive: true });
-
-      // Dosyayı yaz
       await fs.writeFile(filePath, file.content, 'utf-8');
       console.log(`✅ ${file.action === 'create' ? 'Oluşturuldu' : 'Güncellendi'}: ${file.path}`);
     } catch (error) {
@@ -335,8 +272,12 @@ async function applyChanges(changes) {
  */
 async function commitChanges() {
   try {
-    execSync('git config user.name "AI Developer Agent"', { cwd: PROJECT_ROOT });
-    execSync('git config user.email "ai-agent@github.com"', { cwd: PROJECT_ROOT });
+    // Git kullanıcı ayarları (CI ortamında yoksa)
+    try {
+        execSync('git config user.name "AI Developer Agent"', { cwd: PROJECT_ROOT, stdio: 'ignore' });
+        execSync('git config user.email "ai-agent@github.com"', { cwd: PROJECT_ROOT, stdio: 'ignore' });
+    } catch (e) {} // Hata verirse (zaten ayarlıysa) devam et
+
     execSync('git add -A', { cwd: PROJECT_ROOT });
     
     const status = execSync('git status --porcelain', { 
@@ -355,7 +296,7 @@ async function commitChanges() {
       return false;
     }
   } catch (error) {
-    console.error('❌ Git commit hatası:', error.message);
+    console.error('❌ Git commit hatası (önemli olmayabilir):', error.message);
     return false;
   }
 }
@@ -366,79 +307,35 @@ async function commitChanges() {
 async function main() {
   try {
     console.log('🚀 AI Developer Agent başlatılıyor...\n');
-    console.log('🔑 GEMINI_API_KEY kontrol ediliyor...');
-    if (GEMINI_API_KEY) {
-      console.log('✅ GEMINI_API_KEY tanımlı (uzunluk:', GEMINI_API_KEY.length, 'karakter)');
-    } else {
-      console.error('❌ GEMINI_API_KEY tanımlı değil!');
-      process.exit(1);
-    }
-    console.log('');
-
+    
     // Task oku
     console.log('📖 Task dosyası okunuyor:', TASK_FILE);
     const task = await readTask();
-    console.log('✅ Task okundu (uzunluk:', task.length, 'karakter)\n');
 
-  // Context oluştur
-  console.log('🔍 Proje analiz ediliyor...');
-  const context = await getProjectContext();
-  console.log(`✅ ${context.files.length} dosya analiz edildi\n`);
+    // Context oluştur
+    console.log('🔍 Proje analiz ediliyor...');
+    const context = await getProjectContext();
 
-  // AI'dan önerileri al
-  console.log('🤖 AI\'dan kod önerileri isteniyor...');
-  
-  // Debug: Mevcut modelleri listele
-  await listAvailableModels();
-  console.log('');
-  
-  const changes = await getAISuggestions(task, context);
-  
-  if (!changes) {
-    console.error('❌ AI yanıtı alınamadı veya parse edilemedi');
-    console.error('💡 Lütfen AI yanıtını kontrol edin ve tekrar deneyin');
-    process.exit(1);
-  }
-
-  if (!changes.files || changes.files.length === 0) {
-    console.log('ℹ️  AI herhangi bir dosya değişikliği önermedi');
-    console.log('💡 Göreviniz zaten tamamlanmış olabilir veya daha spesifik talimatlar gerekebilir');
-    process.exit(0);
-  }
-
-  // Değişiklikleri uygula
-  await applyChanges(changes);
-
-  // Git commit
-  const committed = await commitChanges();
-  
-  if (committed) {
-    console.log('\n✨ AI Agent görevi tamamlandı! Değişiklikler commit edildi.');
-  } else {
-    console.log('\n✨ AI Agent görevi tamamlandı! (Değişiklik yoktu veya commit edilemedi)');
-  }
-  } catch (error) {
-    console.error('\n❌ Ana fonksiyonda beklenmeyen hata:');
-    console.error('Hata mesajı:', error.message);
-    if (error.stack) {
-      console.error('Stack trace:', error.stack);
+    // AI İşlemi
+    const changes = await getAISuggestions(task, context);
+    
+    if (!changes) {
+      console.error('❌ İşlem başarısız oldu.');
+      process.exit(1);
     }
-    throw error; // Re-throw to be caught by main().catch()
+
+    // Değişiklikleri uygula
+    await applyChanges(changes);
+
+    // Commit
+    await commitChanges();
+    
+    console.log('\n✨ AI Agent görevi tamamlandı!');
+
+  } catch (error) {
+    console.error('\n❌ Kritik hata:', error.message);
+    process.exit(1);
   }
 }
 
-// Hata yakalama
-process.on('unhandledRejection', (error) => {
-  console.error('❌ Beklenmeyen hata:', error);
-  process.exit(1);
-});
-
-// Çalıştır
-main().catch((error) => {
-  console.error('❌ Kritik hata:', error);
-  if (error.stack) {
-    console.error('Stack trace:', error.stack);
-  }
-  process.exit(1);
-});
-
+main();
