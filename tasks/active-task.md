@@ -38,3 +38,4 @@ Basit bir "Hello World" API endpoint'i oluştur:
 - server.js dosyası olarak kaydet
 - package.json'a "start" script'i ekle s
 
+1
