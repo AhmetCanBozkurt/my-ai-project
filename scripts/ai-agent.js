@@ -22,8 +22,9 @@ if (!GEMINI_API_KEY) {
 
 // Gemini AI başlatma
 const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
-// gemini-pro veya gemini-1.5-pro kullan (gemini-1.5-flash bazı API versiyonlarında desteklenmiyor)
-const model = genAI.getGenerativeModel({ model: 'gemini-pro' });
+// Model adını dene - eğer biri çalışmazsa diğerini dene
+// Önce gemini-1.5-pro dene, çalışmazsa gemini-pro
+let model = genAI.getGenerativeModel({ model: 'gemini-1.5-pro' });
 
 /**
  * Task dosyasını oku
@@ -183,8 +184,23 @@ ${context.files.map(f => `\n### ${f.path}\n\`\`\`\n${f.content}\n\`\`\``).join('
   try {
     console.log('🤖 AI ile iletişim kuruluyor...');
     console.log('📤 Prompt uzunluğu:', prompt.length, 'karakter');
+    console.log('🤖 Kullanılan model: gemini-1.5-pro');
     
-    const result = await model.generateContent(prompt);
+    let result;
+    try {
+      result = await model.generateContent(prompt);
+    } catch (modelError) {
+      // Eğer gemini-1.5-pro çalışmazsa, gemini-pro'yu dene
+      if (modelError.message && modelError.message.includes('not found')) {
+        console.log('⚠️  gemini-1.5-pro bulunamadı, gemini-pro deneniyor...');
+        const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
+        model = genAI.getGenerativeModel({ model: 'gemini-pro' });
+        result = await model.generateContent(prompt);
+        console.log('✅ gemini-pro ile başarılı');
+      } else {
+        throw modelError;
+      }
+    }
     const response = await result.response;
     const text = response.text();
     
