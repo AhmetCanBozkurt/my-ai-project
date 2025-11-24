@@ -18,14 +18,22 @@ const PROJECT_ROOT = path.join(__dirname, '..');
 
 if (!GEMINI_API_KEY) {
   console.error('❌ HATA: GEMINI_API_KEY environment variable tanımlı değil!');
+  console.error('💡 GitHub Repository > Settings > Secrets and variables > Actions > GEMINI_API_KEY ekleyin');
   process.exit(1);
+}
+
+// API Key format kontrolü
+if (GEMINI_API_KEY.length < 30) {
+  console.warn('⚠️  API Key çok kısa görünüyor. Lütfen doğru API key\'i kullandığınızdan emin olun.');
 }
 
 // Gemini AI başlatma
 const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
 
-// 🛠️ DÜZELTME: Başlangıç modeli olarak en stabil ve hızlı olan seçildi
-let currentModelName = 'gemini-1.5-flash';
+// 🛠️ DÜZELTME: En stabil model ile başla
+// Not: Model adları API versiyonuna göre değişebilir
+// Eğer çalışmazsa, Google AI Studio'da test edip doğru model adını kullanın
+let currentModelName = 'gemini-pro'; // En eski ve en stabil model
 let model = genAI.getGenerativeModel({ model: currentModelName });
 
 /**
@@ -183,8 +191,9 @@ ${context.files.map(f => `\n### ${f.path}\n\`\`\`\n${f.content}\n\`\`\``).join('
     } catch (modelError) {
       console.log(`⚠️  ${currentModelName} ile hata alındı, alternatif modeller deneniyor...`);
       
-      // 🛠️ DÜZELTME: Güncel ve çalışan model listesi
-      const modelNames = ['gemini-1.5-flash', 'gemini-2.0-flash-exp', 'gemini-1.5-pro-latest'];
+       // 🛠️ DÜZELTME: En yaygın çalışan model listesi (sırayla dene)
+       // Not: Eğer hiçbiri çalışmazsa, API key'inizi ve Generative Language API'nin aktif olduğunu kontrol edin
+       const modelNames = ['gemini-1.5-pro', 'gemini-1.5-flash', 'gemini-pro'];
       let success = false;
       
       for (const modelName of modelNames) {
