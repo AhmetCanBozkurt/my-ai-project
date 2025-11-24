@@ -2,8 +2,9 @@ const express = require('express');
 const app = express();
 const port = process.env.PORT || 3000;
 
+// GET /api/hello endpoint'i
 app.get('/api/hello', (req, res) => {
-  res.json({ message: 'Hello, World from AI Agent!' });
+  res.send('Hello, World from AI Agent!');
 });
 
 app.listen(port, () => {
