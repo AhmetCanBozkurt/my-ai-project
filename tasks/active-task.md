@@ -28,7 +28,7 @@ Login sayfasındaki şifre validasyon hatasını düzelt:
 ```   
   
 ---
-
+ s
 ## Şu Anki Görev:
 
 Basit bir "Hello World" API endpoint'i oluştur:
@@ -36,4 +36,4 @@ Basit bir "Hello World" API endpoint'i oluştur:
 - GET /api/hello endpoint'i ekle
 - Endpoint "Hello, World from AI Agent!" mesajı döndürmeli
 - server.js dosyası olarak kaydet
-- package.json'a "start" script'i ekle
+- package.json'a "start" script'i ekle 
