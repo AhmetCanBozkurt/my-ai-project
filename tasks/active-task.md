@@ -31,10 +31,8 @@ Login sayfasındaki şifre validasyon hatasını düzelt:
  s
 ## Şu Anki Görev:
 
-Test Görevi 3: User API endpoint'leri oluştur:
-- GET /api/users endpoint'i oluştur
-- POST /api/users endpoint'i oluştur
-- GET endpoint'i boş bir array döndürmeli: []
-- POST endpoint'i request body'den name ve email almalı ve {"id": 1, "name": "...", "email": "..."} döndürmeli
-- Express.js kullan, body-parser middleware ekle
-- server.js dosyasına ekle 
+Test Görevi 4 (Hatalı Test): Hatalı bir endpoint oluştur:
+- GET /api/broken endpoint'i oluştur
+- Endpoint'te bilerek syntax hatası olsun (örneğin eksik parantez, yanlış değişken adı)
+- Kod çalışmamalı, hata vermeli
+- Bu test için - PR'da hatayı görelim, sonra düzeltelim 
