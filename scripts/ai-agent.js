@@ -1,6 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const https = require('https');
+const crypto = require('crypto');
 
 // ⚙️ AYARLAR
 const API_KEY = process.env.AI_API_KEY || process.env.GEMINI_API_KEY;
@@ -104,6 +105,14 @@ async function runAgent() {
         console.log("❌ Görev dosyası bulunamadı:", TASK_PATH);
         process.exit(1);
     }
+    
+    // Görev içeriğinden branch ismi oluştur (her görev için farklı PR)
+    const taskHash = crypto.createHash('md5').update(taskContent).digest('hex').substring(0, 8);
+    const BRANCH_NAME = `ai-agent/task-${taskHash}`;
+    
+    // Branch ismini environment variable olarak kaydet (workflow için)
+    process.env.AI_AGENT_BRANCH = BRANCH_NAME;
+    console.log(`🌿 PR Branch: ${BRANCH_NAME}`);
     
     // 3. Proje Bağlamı
     const pkgJson = readFileSafe(path.join(PROJECT_ROOT, 'package.json')) || "{}";

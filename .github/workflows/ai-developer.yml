@@ -33,10 +33,18 @@ jobs:
         run: npm install
 
       - name: Run AI Agent
+        id: ai-agent
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: node scripts/ai-agent.js
+
+      - name: Get Branch Name from AI Agent
+        id: branch-name
+        run: |
+          BRANCH_NAME=$(node -e "const fs=require('fs'); const crypto=require('crypto'); const task=fs.readFileSync('tasks/active-task.md','utf8'); const hash=crypto.createHash('md5').update(task).digest('hex').substring(0,8); console.log('ai-agent/task-'+hash);")
+          echo "branch=$BRANCH_NAME" >> $GITHUB_OUTPUT
+          echo "🌿 PR Branch: $BRANCH_NAME"
 
       - name: Create Pull Request
         if: success()
@@ -51,8 +59,10 @@ jobs:
             **Görev:** `tasks/active-task.md` dosyasındaki talimatlara göre yapılan değişiklikler.
             
             Lütfen değişiklikleri gözden geçirin ve onaylayın.
-          branch: ai-agent/auto-updates
-          delete-branch: true
+            
+            **Not:** Her görev için ayrı PR açılır. Görev değiştiğinde yeni bir PR oluşturulur.
+          branch: ${{ steps.branch-name.outputs.branch }}
+          delete-branch: false
           author: AI Developer Agent <ai-agent@github.com>
           committer: AI Developer Agent <ai-agent@github.com>
 
