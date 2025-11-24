@@ -160,6 +160,9 @@ ${context.files.map(f => `\n### ${f.path}\n\`\`\`\n${f.content}\n\`\`\``).join('
 3. Her dosya için tam içeriği JSON formatında döndür
 4. Sadece değişen veya yeni dosyaları döndür
 5. Kod kalitesi ve best practice'lere uy
+6. HTML/React kodlarında label elementlerini doğru kullan (for attribute'u geçerli bir id'ye referans vermeli)
+7. Tüm kodlar çalışır durumda ve syntax hatası içermemeli
+8. Eğer Express.js kullanıyorsan, server.js dosyası oluştur ve package.json'a start script'i ekle
 
 ## Çıktı Formatı (JSON):
 \`\`\`json
@@ -193,11 +196,22 @@ ${context.files.map(f => `\n### ${f.path}\n\`\`\`\n${f.content}\n\`\`\``).join('
       return JSON.parse(text);
     } catch (e) {
       console.error('❌ AI yanıtı parse edilemedi');
-      console.log('AI Yanıtı:', text);
+      console.error('Parse hatası:', e.message);
+      console.log('\n📄 AI Yanıtı (ilk 2000 karakter):');
+      console.log(text.substring(0, 2000));
+      if (text.length > 2000) {
+        console.log('... (devamı var)');
+      }
       return null;
     }
   } catch (error) {
     console.error('❌ AI API hatası:', error.message);
+    if (error.stack) {
+      console.error('Stack trace:', error.stack);
+    }
+    if (error.response) {
+      console.error('API Response:', error.response);
+    }
     return null;
   }
 }
@@ -281,20 +295,32 @@ async function main() {
   console.log(`✅ ${context.files.length} dosya analiz edildi\n`);
 
   // AI'dan önerileri al
+  console.log('🤖 AI\'dan kod önerileri isteniyor...');
   const changes = await getAISuggestions(task, context);
   
   if (!changes) {
-    console.error('❌ AI yanıtı alınamadı');
+    console.error('❌ AI yanıtı alınamadı veya parse edilemedi');
+    console.error('💡 Lütfen AI yanıtını kontrol edin ve tekrar deneyin');
     process.exit(1);
+  }
+
+  if (!changes.files || changes.files.length === 0) {
+    console.log('ℹ️  AI herhangi bir dosya değişikliği önermedi');
+    console.log('💡 Göreviniz zaten tamamlanmış olabilir veya daha spesifik talimatlar gerekebilir');
+    process.exit(0);
   }
 
   // Değişiklikleri uygula
   await applyChanges(changes);
 
   // Git commit
-  await commitChanges();
-
-  console.log('\n✨ AI Agent görevi tamamlandı!');
+  const committed = await commitChanges();
+  
+  if (committed) {
+    console.log('\n✨ AI Agent görevi tamamlandı! Değişiklikler commit edildi.');
+  } else {
+    console.log('\n✨ AI Agent görevi tamamlandı! (Değişiklik yoktu veya commit edilemedi)');
+  }
 }
 
 // Hata yakalama
@@ -304,5 +330,11 @@ process.on('unhandledRejection', (error) => {
 });
 
 // Çalıştır
-main().catch(console.error);
+main().catch((error) => {
+  console.error('❌ Kritik hata:', error);
+  if (error.stack) {
+    console.error('Stack trace:', error.stack);
+  }
+  process.exit(1);
+});
 
