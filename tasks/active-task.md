@@ -31,8 +31,9 @@ Login sayfasındaki şifre validasyon hatasını düzelt:
  s
 ## Şu Anki Görev:
 
-Test Görevi 4 (Hatalı Test): Hatalı bir endpoint oluştur:
-- GET /api/broken endpoint'i oluştur
-- Endpoint'te bilerek syntax hatası olsun (örneğin eksik parantez, yanlış değişken adı)
-- Kod çalışmamalı, hata vermeli
-- Bu test için - PR'da hatayı görelim, sonra düzeltelim 
+Test Görevi 5 (Düzeltme): Önceki hatalı endpoint'i düzelt:
+- GET /api/broken endpoint'ini düzelt
+- Endpoint çalışır durumda olmalı
+- "Fixed endpoint works!" mesajı döndürmeli
+- Syntax hatası olmamalı, kod çalışmalı
+- Express.js kullan 
