@@ -181,9 +181,16 @@ ${context.files.map(f => `\n### ${f.path}\n\`\`\`\n${f.content}\n\`\`\``).join('
 
   try {
     console.log('🤖 AI ile iletişim kuruluyor...');
+    console.log('📤 Prompt uzunluğu:', prompt.length, 'karakter');
+    
     const result = await model.generateContent(prompt);
     const response = await result.response;
     const text = response.text();
+    
+    if (!text || text.trim().length === 0) {
+      console.error('❌ AI boş yanıt döndürdü');
+      return null;
+    }
 
     console.log('📥 AI yanıtı alındı, parse ediliyor...');
     console.log('📏 Yanıt uzunluğu:', text.length, 'karakter');
@@ -303,12 +310,21 @@ async function commitChanges() {
  * Ana fonksiyon
  */
 async function main() {
-  console.log('🚀 AI Developer Agent başlatılıyor...\n');
+  try {
+    console.log('🚀 AI Developer Agent başlatılıyor...\n');
+    console.log('🔑 GEMINI_API_KEY kontrol ediliyor...');
+    if (GEMINI_API_KEY) {
+      console.log('✅ GEMINI_API_KEY tanımlı (uzunluk:', GEMINI_API_KEY.length, 'karakter)');
+    } else {
+      console.error('❌ GEMINI_API_KEY tanımlı değil!');
+      process.exit(1);
+    }
+    console.log('');
 
-  // Task oku
-  console.log('📖 Task dosyası okunuyor...');
-  const task = await readTask();
-  console.log('✅ Task okundu\n');
+    // Task oku
+    console.log('📖 Task dosyası okunuyor:', TASK_FILE);
+    const task = await readTask();
+    console.log('✅ Task okundu (uzunluk:', task.length, 'karakter)\n');
 
   // Context oluştur
   console.log('🔍 Proje analiz ediliyor...');
@@ -341,6 +357,14 @@ async function main() {
     console.log('\n✨ AI Agent görevi tamamlandı! Değişiklikler commit edildi.');
   } else {
     console.log('\n✨ AI Agent görevi tamamlandı! (Değişiklik yoktu veya commit edilemedi)');
+  }
+  } catch (error) {
+    console.error('\n❌ Ana fonksiyonda beklenmeyen hata:');
+    console.error('Hata mesajı:', error.message);
+    if (error.stack) {
+      console.error('Stack trace:', error.stack);
+    }
+    throw error; // Re-throw to be caught by main().catch()
   }
 }
 
