@@ -22,13 +22,20 @@ if (!GEMINI_API_KEY) {
   process.exit(1);
 }
 
-// API Key format kontrolü
+// API Key format kontrolü ve debug
+console.log('🔑 API Key kontrol ediliyor...');
+console.log('   API Key uzunluğu:', GEMINI_API_KEY.length, 'karakter');
+console.log('   API Key başlangıcı:', GEMINI_API_KEY.substring(0, 10) + '...');
 if (GEMINI_API_KEY.length < 30) {
   console.warn('⚠️  API Key çok kısa görünüyor. Lütfen doğru API key\'i kullandığınızdan emin olun.');
 }
+if (GEMINI_API_KEY.includes(' ') || GEMINI_API_KEY.includes('\n')) {
+  console.warn('⚠️  API Key\'de boşluk veya yeni satır karakteri var. Bu sorun yaratabilir.');
+}
 
 // Gemini AI başlatma
-// 🛠️ DÜZELTME: API key'i doğru şekilde initialize et
+// 🛠️ DÜZELTME: Google AI Studio API key'leri v1 API'sini kullanır, v1beta değil
+// SDK otomatik olarak doğru API versiyonunu seçmeli, ama manuel olarak da belirtebiliriz
 const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
 
 // Model adlarını test et - SDK 'models/' prefix'i olmadan kullanır
