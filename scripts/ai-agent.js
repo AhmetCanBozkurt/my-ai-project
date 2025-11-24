@@ -22,7 +22,8 @@ if (!GEMINI_API_KEY) {
 
 // Gemini AI başlatma
 const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
-const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+// gemini-pro veya gemini-1.5-pro kullan (gemini-1.5-flash bazı API versiyonlarında desteklenmiyor)
+const model = genAI.getGenerativeModel({ model: 'gemini-pro' });
 
 /**
  * Task dosyasını oku
