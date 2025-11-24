@@ -31,7 +31,7 @@ Login sayfasındaki şifre validasyon hatasını düzelt:
  s
 ## Şu Anki Görev:
 
-Basit bir "Hello World" API endpoint'i oluştur:
+Test Görevi 1: Basit bir "Hello World" API endpoint'i oluştur:
 - Express.js kullanarak bir Node.js server oluştur
 - GET /api/hello endpoint'i ekle
 - Endpoint "Hello, World from AI Agent!" mesajı döndürmeli
