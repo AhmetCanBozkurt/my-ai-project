@@ -28,13 +28,17 @@ if (GEMINI_API_KEY.length < 30) {
 }
 
 // Gemini AI başlatma
+// 🛠️ DÜZELTME: API key'i doğru şekilde initialize et
 const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
 
-// 🛠️ DÜZELTME: En stabil model ile başla
-// Not: Model adları API versiyonuna göre değişebilir
-// Eğer çalışmazsa, Google AI Studio'da test edip doğru model adını kullanın
-let currentModelName = 'gemini-pro'; // En eski ve en stabil model
+// Model adlarını test et - SDK 'models/' prefix'i olmadan kullanır
+// Doğru format: 'gemini-pro', 'gemini-1.5-pro', 'gemini-1.5-flash'
+// Yanlış: 'models/gemini-pro' (bu SDK tarafından otomatik eklenir)
+let currentModelName = 'gemini-1.5-flash'; // En güncel ve hızlı model
 let model = genAI.getGenerativeModel({ model: currentModelName });
+
+// Debug: Model adını logla
+console.log('🔧 Model adı:', currentModelName);
 
 /**
  * Task dosyasını oku
@@ -191,9 +195,13 @@ ${context.files.map(f => `\n### ${f.path}\n\`\`\`\n${f.content}\n\`\`\``).join('
     } catch (modelError) {
       console.log(`⚠️  ${currentModelName} ile hata alındı, alternatif modeller deneniyor...`);
       
-       // 🛠️ DÜZELTME: En yaygın çalışan model listesi (sırayla dene)
-       // Not: Eğer hiçbiri çalışmazsa, API key'inizi ve Generative Language API'nin aktif olduğunu kontrol edin
-       const modelNames = ['gemini-1.5-pro', 'gemini-1.5-flash', 'gemini-pro'];
+       // 🛠️ DÜZELTME: Model adlarını doğru formatta dene
+       // SDK model adlarını 'models/' prefix'i olmadan kullanır
+       const modelNames = [
+         'gemini-1.5-flash',  // En hızlı ve güncel
+         'gemini-1.5-pro',    // Daha güçlü
+         'gemini-pro'         // Eski stabil versiyon
+       ];
       let success = false;
       
       for (const modelName of modelNames) {
