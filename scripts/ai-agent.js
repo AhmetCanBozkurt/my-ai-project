@@ -109,21 +109,37 @@ async function runAgent() {
     const pkgJson = readFileSafe(path.join(PROJECT_ROOT, 'package.json')) || "{}";
     
     // 4. Prompt
-    const systemPrompt = `
-    Sen uzman bir NodeJS geliştirisisin.
-    Görevi yap ve SADECE JSON formatında çıktı ver.
-    Yanıtın başında veya sonunda markdown (\`\`\`) OLMASIN.
-    
-    Çıktı Formatı:
-    {
-      "files": [
-        { "path": "src/app.js", "content": "..." },
-        { "path": "package.json", "content": "..." }
-      ]
-    }
-    `;
+    const systemPrompt = `Sen uzman bir Full-Stack Node.js geliştiricisisin. Aşağıdaki görevi yerine getirmek için gerekli kod değişikliklerini yap.
 
-    const userMessage = `PROJE: ${pkgJson}\n\nGÖREV: ${taskContent}`;
+## Talimatlar:
+1. Görevi dikkatlice analiz et
+2. Gerekli tüm dosyaları oluştur veya güncelle
+3. Her dosya için TAM içeriği JSON formatında döndür
+4. Sadece JSON döndür, markdown bloğu kullanma
+5. Express.js kullanıyorsan server.js oluştur ve package.json'a start script'i ekle
+6. Tüm kodlar çalışır durumda olmalı
+
+## Çıktı Formatı (SADECE JSON, markdown yok):
+{
+  "files": [
+    {
+      "path": "server.js",
+      "content": "const express = require('express');\\nconst app = express();\\n..."
+    },
+    {
+      "path": "package.json",
+      "content": "{...}"
+    }
+  ]
+}`;
+
+    const userMessage = `## Mevcut Proje:
+${pkgJson}
+
+## Görev:
+${taskContent}
+
+Yukarıdaki görevi yerine getir ve gerekli tüm dosyaları oluştur.`;
 
     try {
         console.log("⏳ Kod yazılıyor...");
@@ -150,26 +166,52 @@ async function runAgent() {
         if (!candidate) throw new Error("AI boş yanıt döndürdü.");
 
         console.log("📥 Yanıt işleniyor...");
+        console.log("📄 Ham yanıt (ilk 500 karakter):", candidate.substring(0, 500));
+        
         let result;
         try {
-            const cleanJson = candidate.replace(/```json/g, '').replace(/```/g, '').trim();
+            // Markdown temizliği
+            let cleanJson = candidate.trim();
+            // ```json ... ``` formatını temizle
+            cleanJson = cleanJson.replace(/^```json\s*/i, '').replace(/```\s*$/, '').trim();
+            // Eğer hala ``` varsa temizle
+            cleanJson = cleanJson.replace(/```/g, '').trim();
+            
             result = JSON.parse(cleanJson);
+            console.log(`✅ JSON parse başarılı. ${result.files ? result.files.length : 0} dosya bulundu.`);
         } catch (e) {
-            console.error("JSON Parse Hatası. Gelen veri:", candidate);
+            console.error("❌ JSON Parse Hatası:", e.message);
+            console.error("📄 Parse edilemeyen veri:", candidate.substring(0, 1000));
             process.exit(1);
         }
 
         // 6. Dosyaları Yaz
-        if (result.files && Array.isArray(result.files)) {
-            result.files.forEach(file => {
+        if (result.files && Array.isArray(result.files) && result.files.length > 0) {
+            console.log(`\n📝 ${result.files.length} dosya yazılıyor...\n`);
+            result.files.forEach((file, index) => {
+                if (!file.path || !file.content) {
+                    console.log(`⚠️ Dosya ${index + 1} geçersiz (path veya content eksik), atlanıyor.`);
+                    return;
+                }
+                
                 const fullPath = path.join(PROJECT_ROOT, file.path);
                 const dir = path.dirname(fullPath);
-                if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-                fs.writeFileSync(fullPath, file.content);
-                console.log(`✅ Dosya Yazıldı: ${file.path}`);
+                
+                try {
+                    if (!fs.existsSync(dir)) {
+                        fs.mkdirSync(dir, { recursive: true });
+                    }
+                    fs.writeFileSync(fullPath, file.content, 'utf8');
+                    console.log(`✅ [${index + 1}/${result.files.length}] Dosya yazıldı: ${file.path}`);
+                } catch (writeError) {
+                    console.error(`❌ Dosya yazılamadı (${file.path}):`, writeError.message);
+                }
             });
+            console.log(`\n✨ Toplam ${result.files.length} dosya işlendi.`);
         } else {
-            console.log("⚠️ AI dosya üretmedi.");
+            console.log("⚠️ AI dosya üretmedi veya files array boş.");
+            console.log("📄 AI yanıtı:", JSON.stringify(result, null, 2).substring(0, 500));
+            process.exit(1);
         }
 
     } catch (error) {
