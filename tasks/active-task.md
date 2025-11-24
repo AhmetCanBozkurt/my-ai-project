@@ -36,6 +36,4 @@ Basit bir "Hello World" API endpoint'i oluştur:
 - GET /api/hello endpoint'i ekle
 - Endpoint "Hello, World from AI Agent!" mesajı döndürmeli
 - server.js dosyası olarak kaydet
-- package.json'a "start" script'i ekle s
-
-1
+- package.json'a "start" script'i ekle

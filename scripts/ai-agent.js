@@ -185,22 +185,43 @@ ${context.files.map(f => `\n### ${f.path}\n\`\`\`\n${f.content}\n\`\`\``).join('
     const response = await result.response;
     const text = response.text();
 
-    // JSON çıktısını parse et
-    const jsonMatch = text.match(/```json\n([\s\S]*?)\n```/);
+    console.log('📥 AI yanıtı alındı, parse ediliyor...');
+    console.log('📏 Yanıt uzunluğu:', text.length, 'karakter');
+    
+    // JSON çıktısını parse et - farklı formatları dene
+    let jsonMatch = text.match(/```json\n([\s\S]*?)\n```/);
+    if (!jsonMatch) {
+      // Alternatif format: ```json ... ```
+      jsonMatch = text.match(/```json([\s\S]*?)```/);
+    }
+    if (!jsonMatch) {
+      // Alternatif format: { ... } direkt
+      jsonMatch = text.match(/\{[\s\S]*\}/);
+    }
+    
     if (jsonMatch) {
-      return JSON.parse(jsonMatch[1]);
+      try {
+        const jsonText = jsonMatch[1] || jsonMatch[0];
+        const parsed = JSON.parse(jsonText);
+        console.log('✅ JSON başarıyla parse edildi');
+        return parsed;
+      } catch (e) {
+        console.error('⚠️  JSON match bulundu ama parse edilemedi:', e.message);
+      }
     }
 
     // JSON bulunamazsa, tüm metni parse etmeyi dene
     try {
-      return JSON.parse(text);
+      const parsed = JSON.parse(text);
+      console.log('✅ Tüm metin JSON olarak parse edildi');
+      return parsed;
     } catch (e) {
       console.error('❌ AI yanıtı parse edilemedi');
       console.error('Parse hatası:', e.message);
-      console.log('\n📄 AI Yanıtı (ilk 2000 karakter):');
-      console.log(text.substring(0, 2000));
-      if (text.length > 2000) {
-        console.log('... (devamı var)');
+      console.log('\n📄 AI Yanıtı (ilk 3000 karakter):');
+      console.log(text.substring(0, 3000));
+      if (text.length > 3000) {
+        console.log(`... (${text.length - 3000} karakter daha var)`);
       }
       return null;
     }
