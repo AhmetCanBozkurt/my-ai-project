@@ -10,6 +10,7 @@ const fs = require('fs').promises;
 const path = require('path');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 const { execSync } = require('child_process');
+const https = require('https');
 
 // Yapılandırma
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
@@ -34,8 +35,9 @@ if (GEMINI_API_KEY.includes(' ') || GEMINI_API_KEY.includes('\n')) {
 }
 
 // Gemini AI başlatma
-// 🛠️ DÜZELTME: Google AI Studio API key'leri v1 API'sini kullanır, v1beta değil
-// SDK otomatik olarak doğru API versiyonunu seçmeli, ama manuel olarak da belirtebiliriz
+// 🛠️ DÜZELTME: Google AI Studio API key'leri v1 API'sini kullanır
+// SDK 0.24.1 hala v1beta kullanıyor, bu yüzden direkt REST API kullanacağız
+// Alternatif: SDK'nın API versiyonunu kontrol et ve v1'e zorla
 const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
 
 // Model adlarını test et - SDK 'models/' prefix'i olmadan kullanır
@@ -153,6 +155,64 @@ async function getAllFiles(dirPath, maxFiles = 50) {
 }
 
 /**
+ * REST API ile direkt Gemini API çağrısı (v1 API versiyonu için)
+ */
+async function callGeminiAPIv1(modelName, prompt) {
+  return new Promise((resolve, reject) => {
+    const url = `https://generativelanguage.googleapis.com/v1/models/${modelName}:generateContent?key=${GEMINI_API_KEY}`;
+    
+    const postData = JSON.stringify({
+      contents: [{
+        parts: [{
+          text: prompt
+        }]
+      }]
+    });
+
+    const options = {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Content-Length': Buffer.byteLength(postData)
+      }
+    };
+
+    const req = https.request(url, options, (res) => {
+      let data = '';
+      
+      res.on('data', (chunk) => {
+        data += chunk;
+      });
+      
+      res.on('end', () => {
+        if (res.statusCode === 200) {
+          try {
+            const response = JSON.parse(data);
+            if (response.candidates && response.candidates[0] && response.candidates[0].content) {
+              const text = response.candidates[0].content.parts[0].text;
+              resolve(text);
+            } else {
+              reject(new Error('Unexpected API response format: ' + JSON.stringify(response).substring(0, 200)));
+            }
+          } catch (e) {
+            reject(new Error('Failed to parse API response: ' + e.message));
+          }
+        } else {
+          reject(new Error(`API returned status ${res.statusCode}: ${data.substring(0, 500)}`));
+        }
+      });
+    });
+
+    req.on('error', (e) => {
+      reject(new Error(`Request failed: ${e.message}`));
+    });
+
+    req.write(postData);
+    req.end();
+  });
+}
+
+/**
  * AI'dan kod değişikliklerini al
  */
 async function getAISuggestions(task, context) {
@@ -195,52 +255,38 @@ ${context.files.map(f => `\n### ${f.path}\n\`\`\`\n${f.content}\n\`\`\``).join('
   try {
     console.log('🤖 AI ile iletişim kuruluyor...');
     console.log(`🤖 Kullanılan model: ${currentModelName}`);
+    console.log('🔄 v1 API versiyonu ile direkt REST API çağrısı yapılıyor...');
     
-    let result;
-    try {
-      result = await model.generateContent(prompt);
-    } catch (modelError) {
-      console.log(`⚠️  ${currentModelName} ile hata alındı, alternatif modeller deneniyor...`);
-      
-       // 🛠️ DÜZELTME: Model adlarını doğru formatta dene
-       // SDK model adlarını 'models/' prefix'i olmadan kullanır
-       const modelNames = [
-         'gemini-1.5-flash',  // En hızlı ve güncel
-         'gemini-1.5-pro',    // Daha güçlü
-         'gemini-pro'         // Eski stabil versiyon
-       ];
-      let success = false;
-      
-      for (const modelName of modelNames) {
-        try {
-          console.log(`🔄 ${modelName} deneniyor...`);
-          // Model instance'ını yenile
-          const newGenAI = new GoogleGenerativeAI(GEMINI_API_KEY);
-          model = newGenAI.getGenerativeModel({ model: modelName });
-          result = await model.generateContent(prompt);
-          console.log(`✅ ${modelName} ile başarılı!`);
-          currentModelName = modelName;
-          success = true;
-          break;
-        } catch (e) {
-          // Detaylı hata mesajı - URL'yi görmek için
-          const errorMsg = e.message || String(e);
-          console.log(`❌ ${modelName} çalışmadı:`);
-          console.log(`   Hata: ${errorMsg.substring(0, 200)}`);
-          if (e.stack) {
-            console.log(`   Stack: ${e.stack.substring(0, 300)}`);
-          }
-          continue;
-        }
-      }
-      
-      if (!success) {
-        throw new Error('Hiçbir model çalışmadı. API Key veya kota durumunu kontrol edin.');
+    // 🛠️ DÜZELTME: SDK v1beta kullanıyor, Google AI Studio API key'leri v1 gerektiriyor
+    // Bu yüzden direkt REST API kullanıyoruz
+    const modelNames = [
+      'gemini-1.5-flash',  // En hızlı ve güncel
+      'gemini-1.5-pro',    // Daha güçlü
+      'gemini-pro'         // Eski stabil versiyon
+    ];
+    
+    let text = null;
+    let success = false;
+    
+    for (const modelName of modelNames) {
+      try {
+        console.log(`🔄 ${modelName} deneniyor (v1 API)...`);
+        text = await callGeminiAPIv1(modelName, prompt);
+        console.log(`✅ ${modelName} ile başarılı!`);
+        currentModelName = modelName;
+        success = true;
+        break;
+      } catch (e) {
+        const errorMsg = e.message || String(e);
+        console.log(`❌ ${modelName} çalışmadı:`);
+        console.log(`   Hata: ${errorMsg.substring(0, 200)}`);
+        continue;
       }
     }
-
-    const response = await result.response;
-    const text = response.text();
+    
+    if (!success || !text) {
+      throw new Error('Hiçbir model çalışmadı. API Key veya kota durumunu kontrol edin.');
+    }
     
     console.log('📥 AI yanıtı parse ediliyor...');
     
