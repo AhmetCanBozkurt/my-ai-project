@@ -2,9 +2,9 @@
   "name": "my-ai-project",
   "version": "1.0.0",
   "description": "Cloud AI Developer - GitHub Actions ve Google Gemini API ile otomatik kod yazan ajan",
-  "main": "scripts/ai-agent.js",
+  "main": "server.js",
   "scripts": {
-    "start": "node scripts/ai-agent.js",
+    "start": "node server.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [
@@ -16,10 +16,10 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
-    "@google/generative-ai": "^0.24.1"
+    "@google/generative-ai": "^0.24.1",
+    "express": "^4.19.2"
   },
   "engines": {
     "node": ">=18.0.0"
   }
 }
-
