@@ -55,7 +55,6 @@ jobs:
             Lütfen değişiklikleri gözden geçirin ve onaylayın.
           branch: ai-agent/auto-updates
           delete-branch: true
-          push-to-fork: none
           author: AI Developer Agent <ai-agent@github.com>
           committer: AI Developer Agent <ai-agent@github.com>
 
