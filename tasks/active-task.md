@@ -31,9 +31,10 @@ Login sayfasındaki şifre validasyon hatasını düzelt:
  s
 ## Şu Anki Görev:
 
-Test Görevi 2: Health check endpoint'i ekle:
-- GET /api/health endpoint'i oluştur
-- Endpoint JSON formatında {"status": "ok", "timestamp": "..."} döndürmeli
-- Timestamp olarak şu anki zamanı döndürmeli
-- Express.js kullan
-- Mevcut server.js dosyasına ekle veya yeni bir dosya oluştur 
+Test Görevi 3: User API endpoint'leri oluştur:
+- GET /api/users endpoint'i oluştur
+- POST /api/users endpoint'i oluştur
+- GET endpoint'i boş bir array döndürmeli: []
+- POST endpoint'i request body'den name ve email almalı ve {"id": 1, "name": "...", "email": "..."} döndürmeli
+- Express.js kullan, body-parser middleware ekle
+- server.js dosyasına ekle 
