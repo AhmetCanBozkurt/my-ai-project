@@ -2,6 +2,9 @@ name: AI Developer Agent
 
 on:
   workflow_dispatch:  # Manuel tetikleme
+  schedule:
+    # Her gün saat 00:00 UTC'de çalışır
+    - cron: '0 0 * * *'
   push:
     branches:
       - main
