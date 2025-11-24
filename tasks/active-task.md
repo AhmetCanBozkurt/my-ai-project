@@ -26,7 +26,7 @@ Login sayfasındaki şifre validasyon hatasını düzelt:
 - Minimum 8 karakter kontrolü ekle
 - Büyük/küçük harf ve rakam zorunluluğu
 ```   
-
+  
 ---
 
 ## Şu Anki Görev:
