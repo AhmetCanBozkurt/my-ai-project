@@ -22,8 +22,27 @@ if (!GEMINI_API_KEY) {
 
 // Gemini AI başlatma
 const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
-// Model adını dene - eğer biri çalışmazsa diğerini dene
-// Önce gemini-1.5-pro dene, çalışmazsa gemini-pro
+
+// Mevcut modelleri listele (debug için) - SDK'da listModels() olmayabilir, bu yüzden try-catch ile
+async function listAvailableModels() {
+  try {
+    // listModels() metodu SDK'da olmayabilir, bu yüzden hata yakalama ile
+    if (typeof genAI.listModels === 'function') {
+      const models = await genAI.listModels();
+      console.log('📋 Mevcut modeller:');
+      models.forEach(m => {
+        console.log(`  - ${m.name} (${m.displayName || 'N/A'})`);
+      });
+    } else {
+      console.log('ℹ️  Model listeleme metodu mevcut değil, direkt deneme yapılacak');
+    }
+  } catch (e) {
+    console.log('ℹ️  Modeller listelenemedi (normal olabilir):', e.message.substring(0, 100));
+  }
+}
+
+// Model adını dene - farklı model adlarını sırayla dene
+// Google AI Studio'da genellikle 'models/gemini-pro' veya 'models/gemini-1.5-pro' kullanılır
 let model = genAI.getGenerativeModel({ model: 'gemini-1.5-pro' });
 
 /**
@@ -190,13 +209,31 @@ ${context.files.map(f => `\n### ${f.path}\n\`\`\`\n${f.content}\n\`\`\``).join('
     try {
       result = await model.generateContent(prompt);
     } catch (modelError) {
-      // Eğer gemini-1.5-pro çalışmazsa, gemini-pro'yu dene
+      // Eğer gemini-1.5-pro çalışmazsa, farklı model adlarını dene
       if (modelError.message && modelError.message.includes('not found')) {
-        console.log('⚠️  gemini-1.5-pro bulunamadı, gemini-pro deneniyor...');
-        const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
-        model = genAI.getGenerativeModel({ model: 'gemini-pro' });
-        result = await model.generateContent(prompt);
-        console.log('✅ gemini-pro ile başarılı');
+        console.log('⚠️  gemini-1.5-pro bulunamadı, alternatif modeller deneniyor...');
+        
+        const modelNames = ['gemini-pro', 'gemini-1.5-flash', 'gemini-1.5-flash-latest'];
+        let success = false;
+        
+        for (const modelName of modelNames) {
+          try {
+            console.log(`🔄 ${modelName} deneniyor...`);
+            const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
+            model = genAI.getGenerativeModel({ model: modelName });
+            result = await model.generateContent(prompt);
+            console.log(`✅ ${modelName} ile başarılı!`);
+            success = true;
+            break;
+          } catch (e) {
+            console.log(`❌ ${modelName} çalışmadı: ${e.message.substring(0, 100)}`);
+            continue;
+          }
+        }
+        
+        if (!success) {
+          throw new Error('Hiçbir model çalışmadı. Lütfen API key\'inizi ve model adlarını kontrol edin.');
+        }
       } else {
         throw modelError;
       }
@@ -350,6 +387,11 @@ async function main() {
 
   // AI'dan önerileri al
   console.log('🤖 AI\'dan kod önerileri isteniyor...');
+  
+  // Debug: Mevcut modelleri listele
+  await listAvailableModels();
+  console.log('');
+  
   const changes = await getAISuggestions(task, context);
   
   if (!changes) {
